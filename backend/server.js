@@ -88,6 +88,30 @@ app.post('/api/transactions', async (req, res) => {
     }
 });
 
+app.get('/api/transactions/summary/:userId', async (req, res) => {
+    try {
+        
+        const { userId } = req.params;
+        if (!userId) {
+            return res.status(400).json({ error: "Missing userId parameter" });
+        }
+
+        const balance = await sql`SELECT COALESCE(SUM(amount), 0) AS balance FROM transactions WHERE user_id = ${userId}`;
+        const incomeResult = await sql`SELECT COALESCE(SUM(amount), 0) AS income FROM transactions WHERE user_id = ${userId} AND amount > 0`;
+        const expenseResult = await sql`SELECT COALESCE(SUM(amount), 0) AS expense FROM transactions WHERE user_id = ${userId} AND amount < 0`;
+
+        res.status(200).json({
+            balance: balance[0].balance,
+            income: incomeResult[0].income,
+            expense: expenseResult[0].expense
+        });
+
+    } catch (error) {
+        console.log("Error creating transaction :", error)
+        res.status(500).json({ error: "Internal server error" });
+    }
+})
+
 initDB().then(() => {
     app.listen(PORT, () => {
         console.log('Server is running on port', PORT);
